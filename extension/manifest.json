@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Influencer CRM - Add to CRM",
+  "version": "1.0.0",
+  "description": "Save Instagram influencer profiles to your CRM with one click.",
+  "permissions": [],
+  "host_permissions": ["http://localhost:3000/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [{
+    "matches": ["https://www.instagram.com/*"],
+    "js": ["content.js"],
+    "css": ["content.css"],
+    "run_at": "document_idle"
+  }]
+}

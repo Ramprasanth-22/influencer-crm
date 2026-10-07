@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Influencer CRM</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--ink:#1b1f3b;--mute:#6b7090;--line:#e4e6f0;--acc:#4f46e5}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:20px 24px}
+h1{margin:0;font-size:22px}.count{color:var(--mute)}
+input{padding:10px 14px;border:1px solid var(--line);border-radius:8px;min-width:260px;font:inherit}
+.wrap{padding:0 24px 40px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden}
+th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#eef0fa;font-weight:600}
+td img{width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--line)}
+.bio{max-width:320px;color:var(--mute);white-space:pre-wrap}
+.tag{display:inline-block;background:#e0e7ff;color:var(--acc);padding:2px 8px;border-radius:99px;margin:0 4px 4px 0;font-size:12px}
+button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 10px;cursor:pointer}
+button:hover{border-color:#e11d48;color:#e11d48}a{color:var(--acc)}
+.empty{padding:40px;text-align:center;color:var(--mute)}
+</style></head><body>
+<header><div><h1>Influencer CRM</h1><span class="count" id="count"></span></div>
+<input id="q" placeholder="Search name, username, bio or tag"></header>
+<div class="wrap"><table><thead><tr>
+<th>Photo</th><th>Influencer</th><th>Profile Link</th><th>Followers</th><th>Bio</th><th>Tags / Notes</th><th>Saved</th><th></th>
+</tr></thead><tbody id="rows"></tbody></table><div id="empty" class="empty" hidden>No influencers yet. Open an Instagram profile and click Add to CRM.</div></div>
+<script>
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function load(){
+  const q=document.getElementById("q").value;
+  const data=await (await fetch("/api/influencers?q="+encodeURIComponent(q))).json();
+  document.getElementById("count").textContent=data.length+" saved";
+  document.getElementById("empty").hidden=data.length>0;
+  document.getElementById("rows").innerHTML=data.map(r=>`<tr>
+    <td>${r.profile_pic?`<img src="${esc(r.profile_pic)}" referrerpolicy="no-referrer" alt="">`:""}</td>
+    <td><strong>${esc(r.name||"-")}</strong><br>@${esc(r.username)}</td>
+    <td><a href="${esc(r.profile_url)}" target="_blank">${esc(r.profile_url||"N/A")}</a></td>
+    <td>${esc(r.followers_text||"N/A")}<br><small>Following: ${esc(r.following_text||"N/A")}</small><br><small>Posts: ${esc(r.posts_text||"N/A")}</small></td>
+    <td class="bio">${esc(r.bio||"N/A")}</td>
+    <td>${(r.tags||"").split(",").filter(Boolean).map(t=>`<span class="tag">${esc(t.trim())}</span>`).join("")}<div>${esc(r.notes||"")}</div></td>
+    <td>${esc(r.created_at)}</td>
+    <td><button onclick="del(${r.id})">Delete</button></td></tr>`).join("");
+}
+async function del(id){if(confirm("Delete this influencer?")){await fetch("/api/influencers/"+id,{method:"DELETE"});load();}}
+document.getElementById("q").addEventListener("input",load);load();
+</script></body></html>
