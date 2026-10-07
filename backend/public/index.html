@@ -6,41 +6,123 @@
 :root{--bg:#f6f7fb;--card:#fff;--ink:#1b1f3b;--mute:#6b7090;--line:#e4e6f0;--acc:#4f46e5}
 *{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
 header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:20px 24px}
-h1{margin:0;font-size:22px}.count{color:var(--mute)}
+h1{margin:0;font-size:22px}
 input{padding:10px 14px;border:1px solid var(--line);border-radius:8px;min-width:260px;font:inherit}
+.top{display:flex;flex-wrap:wrap;gap:16px;padding:0 24px 20px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.box h2{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+.total{width:200px;display:flex;flex-direction:column;justify-content:center}
+.total .num{font-size:44px;font-weight:700;color:var(--acc);line-height:1.1}
+.total .sub{color:var(--mute);font-size:13px}
+.best{flex:1;min-width:300px}
+.row{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px}
+.mini{flex:0 0 160px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:12px 8px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:inherit;background:#fafbff}
+.mini:hover{border-color:var(--acc)}
+.mini img{width:48px;height:48px;border-radius:50%;object-fit:cover;background:var(--line)}
+.mini .rk{font-size:12px;font-weight:700;color:var(--acc)}
+.mini .nm{font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini .un{font-size:12px;color:var(--mute);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini .fl{font-weight:700;margin-top:4px}
 .wrap{padding:0 24px 40px;overflow-x:auto}
 table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden}
 th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
 th{background:#eef0fa;font-weight:600}
-td img{width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--line)}
-.bio{max-width:320px;color:var(--mute);white-space:pre-wrap}
+td img.pic{width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--line)}
+.bio{max-width:300px;color:var(--mute);white-space:pre-wrap}
+.note{max-width:220px;white-space:pre-wrap}
 .tag{display:inline-block;background:#e0e7ff;color:var(--acc);padding:2px 8px;border-radius:99px;margin:0 4px 4px 0;font-size:12px}
 button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 10px;cursor:pointer}
 button:hover{border-color:#e11d48;color:#e11d48}a{color:var(--acc)}
 .empty{padding:40px;text-align:center;color:var(--mute)}
+.none{color:var(--mute);font-size:14px}
+.bar{display:flex;align-items:center;gap:10px;margin:0 24px 12px;padding:10px 14px;background:#fff1f2;border:1px solid #fecdd3;border-radius:10px}
+.bar button.danger{background:#e11d48;color:#fff;border-color:#e11d48}
+.bar button.danger:hover{background:#be123c;color:#fff}
+th.sel,td.sel{text-align:center;white-space:nowrap}
+input[type=checkbox]{min-width:0;width:18px;height:18px;padding:0;cursor:pointer;vertical-align:middle;accent-color:var(--acc)}
 </style></head><body>
-<header><div><h1>Influencer CRM</h1><span class="count" id="count"></span></div>
+<header><h1>Influencer CRM</h1>
 <input id="q" placeholder="Search name, username, bio or tag"></header>
+
+<div class="top">
+  <div class="box total"><h2>Total saved</h2><div class="num" id="total">0</div><div class="sub">influencers in CRM</div></div>
+  <div class="box best"><h2>Top 5 by followers</h2><div class="row" id="best"></div></div>
+</div>
+
+<div class="bar" id="bar" hidden><span id="selCount"></span><button class="danger" onclick="delSel()">Delete selected</button><button onclick="clearSel()">Clear</button></div>
 <div class="wrap"><table><thead><tr>
-<th>Photo</th><th>Influencer</th><th>Profile Link</th><th>Followers</th><th>Bio</th><th>Tags / Notes</th><th>Saved</th><th></th>
-</tr></thead><tbody id="rows"></tbody></table><div id="empty" class="empty" hidden>No influencers yet. Open an Instagram profile and click Add to CRM.</div></div>
+<th>Photo</th><th>Influencer</th><th>Profile Link</th><th>Followers</th><th>Bio</th><th>Tags</th><th>Notes</th><th>Saved</th><th class="sel"><input type="checkbox" id="selAll" title="Select all" aria-label="Select all"></th>
+</tr></thead><tbody id="rows"></tbody></table><div id="empty" class="empty" hidden>No influencers yet. Open an Instagram profile and click the Add to CRM icon.</div></div>
 <script>
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-async function load(){
-  const q=document.getElementById("q").value;
-  const data=await (await fetch("/api/influencers?q="+encodeURIComponent(q))).json();
-  document.getElementById("count").textContent=data.length+" saved";
-  document.getElementById("empty").hidden=data.length>0;
-  document.getElementById("rows").innerHTML=data.map(r=>`<tr>
-    <td>${r.profile_pic?`<img src="${esc(r.profile_pic)}" referrerpolicy="no-referrer" alt="">`:""}</td>
+const imgTag=(src,cls)=>src?`<img class="${cls}" src="${esc(src)}" referrerpolicy="no-referrer" alt="" onerror="this.style.visibility='hidden'">`:"";
+function num(r){
+  if(Number.isFinite(r.followers)) return r.followers;
+  const m=String(r.followers_text||"").replace(/,/g,"").match(/([\d.]+)\s*([KMB])?/i);
+  if(!m) return 0;
+  return Math.round(parseFloat(m[1])*({K:1e3,M:1e6,B:1e9}[(m[2]||"").toUpperCase()]||1));
+}
+let ALL=[];
+const SEL=new Set();
+let VIEW=[];
+function syncSel(list){
+  VIEW=list;
+  for(const id of [...SEL]) if(!ALL.some(r=>r.id===id)) SEL.delete(id);
+  const n=SEL.size, all=document.getElementById("selAll");
+  const inView=list.filter(r=>SEL.has(r.id)).length;
+  all.checked=list.length>0&&inView===list.length;
+  all.indeterminate=inView>0&&inView<list.length;
+  document.getElementById("bar").hidden=n===0;
+  document.getElementById("selCount").textContent=n+" selected";
+}
+function toggleAll(on){ VIEW.forEach(r=>{on?SEL.add(r.id):SEL.delete(r.id);}); render(); }
+function clearSel(){ SEL.clear(); render(); }
+async function delSel(){
+  const ids=[...SEL];
+  if(!ids.length||!confirm("Delete "+ids.length+" selected influencer(s)?")) return;
+  await Promise.all(ids.map(id=>fetch("/api/influencers/"+id,{method:"DELETE"})));
+  SEL.clear(); window.__sig=null; load();
+}
+function render(){
+  const q=document.getElementById("q").value.trim().toLowerCase();
+  const list=ALL.filter(r=>[r.username,r.name,r.bio,r.tags].some(v=>String(v||"").toLowerCase().includes(q)));
+  document.getElementById("total").textContent=ALL.length;
+  const best=[...ALL].sort((a,b)=>num(b)-num(a)).slice(0,5);
+  document.getElementById("best").innerHTML=best.length?best.map((r,i)=>`<a class="mini" href="${esc(r.profile_url)}" target="_blank">
+    <span class="rk">#${i+1}</span>${imgTag(r.profile_pic,"")}
+    <span class="nm">${esc(r.name||r.username)}</span><span class="un">@${esc(r.username)}</span>
+    <span class="fl">${esc(r.followers_text||"N/A")}</span></a>`).join(""):'<span class="none">No profiles saved yet.</span>';
+  document.getElementById("empty").hidden=list.length>0;
+  document.getElementById("rows").innerHTML=list.map(r=>`<tr>
+    <td>${imgTag(r.profile_pic,"pic")}</td>
     <td><strong>${esc(r.name||"-")}</strong><br>@${esc(r.username)}</td>
     <td><a href="${esc(r.profile_url)}" target="_blank">${esc(r.profile_url||"N/A")}</a></td>
     <td>${esc(r.followers_text||"N/A")}<br><small>Following: ${esc(r.following_text||"N/A")}</small><br><small>Posts: ${esc(r.posts_text||"N/A")}</small></td>
     <td class="bio">${esc(r.bio||"N/A")}</td>
-    <td>${(r.tags||"").split(",").filter(Boolean).map(t=>`<span class="tag">${esc(t.trim())}</span>`).join("")}<div>${esc(r.notes||"")}</div></td>
+    <td>${(r.tags||"").split(",").filter(Boolean).map(t=>`<span class="tag">${esc(t.trim())}</span>`).join("")||"-"}</td>
+    <td class="note">${esc(r.notes||"-")}</td>
     <td>${esc(r.created_at)}</td>
-    <td><button onclick="del(${r.id})">Delete</button></td></tr>`).join("");
+    <td class="sel"><input type="checkbox" class="rc" data-id="${r.id}" ${SEL.has(r.id)?"checked":""}> <button onclick="del(${r.id})">Delete</button></td></tr>`).join("");
+  syncSel(list);
+}
+async function load(){
+  try{
+    const data=await (await fetch("/api/influencers")).json();
+    const sig=JSON.stringify(data);
+    if(sig===window.__sig) return;
+    window.__sig=sig; ALL=data; render();
+  }catch(e){}
 }
 async function del(id){if(confirm("Delete this influencer?")){await fetch("/api/influencers/"+id,{method:"DELETE"});load();}}
-document.getElementById("q").addEventListener("input",load);load();
+document.getElementById("q").addEventListener("input",render);
+document.getElementById("selAll").addEventListener("change",e=>toggleAll(e.target.checked));
+document.getElementById("rows").addEventListener("change",e=>{
+  if(!e.target.classList||!e.target.classList.contains("rc")) return;
+  const id=Number(e.target.dataset.id);
+  e.target.checked?SEL.add(id):SEL.delete(id);
+  syncSel(VIEW);
+});
+load();
+setInterval(load,2000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)load();});
 </script></body></html>
