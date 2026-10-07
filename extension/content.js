@@ -208,6 +208,16 @@ async function enrichFromHtml(d) {
   } catch (e) { /* ignore */ }
 }
 
+// @mentions found in the bio (e.g. "@brand.official") become the default tags
+function extractMentions(text) {
+  const out = [];
+  for (const m of String(text || "").matchAll(/(?<![A-Za-z0-9._])@([A-Za-z0-9_](?:[A-Za-z0-9._]*[A-Za-z0-9_])?)/g)) {
+    const tag = "@" + m[1];
+    if (!out.some((t) => t.toLowerCase() === tag.toLowerCase())) out.push(tag);
+  }
+  return out.join(", ");
+}
+
 function closePanel() { document.getElementById("crm-panel")?.remove(); }
 
 let opening = false;
@@ -254,7 +264,7 @@ async function openPanel() {
     <label>Following (editable)</label><input id="crm-following" value="${esc(d.following_text)}">
     <label>Posts (editable)</label><input id="crm-posts" value="${esc(d.posts_text)}">
     <label>Bio (editable)</label><textarea id="crm-bio" rows="3">${esc(d.bio)}</textarea>
-    <label>Tags (comma separated)</label><input id="crm-tags" placeholder="fashion, micro-influencer">
+    <label>Tags (comma separated)</label><input id="crm-tags" value="${esc(extractMentions(d.bio))}" placeholder="fashion, micro-influencer">
     <label>Notes</label><textarea id="crm-notes" rows="2" placeholder="Any notes..."></textarea>
     <small style="color:#6b7090">Source: ${esc(d.src || "page text (please check numbers)")}</small>
     <div class="actions"><button id="crm-save">Save</button><button id="crm-close">Close</button></div>
